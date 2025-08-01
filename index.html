@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D Print Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f0f0f0, #d0f0ff);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    input {
+      width: calc(33% - 10px);
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      font-size: 16px;
+      background-color: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1a5dcc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 30px;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    #totalProfitEl {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+
+    .footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 14px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>3D Print Profit Tracker</h1>
+    <input type="number" id="grams" placeholder="Filament (grams)" />
+    <input type="number" id="minutes" placeholder="Time (minutes)" />
+    <input type="number" id="price" placeholder="Selling Price (₹)" />
+    <br/>
+    <button onclick="addRecord()">Add</button>
+
+    <table id="recordTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Grams</th>
+          <th>Minutes</th>
+          <th>Price (₹)</th>
+          <th>Cost (₹)</th>
+          <th>Profit (₹)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <p id="totalProfitEl"></p>
+  </div>
+
+  <script>
+    const costPerGram = 1.0;
+    const electricityPerMin = 0.325 / 60;
+    const maintenancePerMin = 1.33 / 60;
+    const printerRecoveryPerMin = 50 / 60;
+    const nozzleWearPerMin = 2.0 / 60;
+
+    let records = JSON.parse(localStorage.getItem("printRecords")) || [];
+
+    function updateTable() {
+      const tbody = document.querySelector("#recordTable tbody");
+      tbody.innerHTML = "";
+
+      let totalProfit = 0;
+
+      records.forEach((record, index) => {
+        const cost = (
+          record.grams * costPerGram +
+          record.minutes * (electricityPerMin + maintenancePerMin + printerRecoveryPerMin + nozzleWearPerMin)
+        ).toFixed(2);
+
+        const profit = (record.price - cost).toFixed(2);
+        totalProfit += parseFloat(profit);
+
+        const row = `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${record.grams}</td>
+            <td>${record.minutes}</td>
+            <td>₹${record.price}</td>
+            <td>₹${cost}</td>
+            <td style="color:${profit >= 0 ? 'green' : 'red'}">₹${profit}</td>
+          </tr>
+        `;
+        tbody.insertAdjacentHTML("beforeend", row);
+      });
+
+      const totalEl = document.getElementById("totalProfitEl");
+      totalEl.textContent = `Total ${totalProfit >= 0 ? "Profit" : "Loss"}: ₹${totalProfit.toFixed(2)}`;
+      totalEl.style.color = totalProfit >= 0 ? "green" : "red";
+    }
+
+    function addRecord() {
+      const grams = parseFloat(document.getElementById("grams").value);
+      const minutes = parseFloat(document.getElementById("minutes").value);
+      const price = parseFloat(document.getElementById("price").value);
+
+      if (isNaN(grams) || isNaN(minutes) || isNaN(price)) {
+        alert("Please enter valid numbers.");
+        return;
+      }
+
+      const record = { grams, minutes, price };
+      records.push(record);
+      localStorage.setItem("printRecords", JSON.stringify(records));
+      updateTable();
+
+      // Clear inputs
+      document.getElementById("grams").value = "";
+      document.getElementById("minutes").value = "";
+      document.getElementById("price").value = "";
+    }
+
+    updateTable();
+  </script>
+</body>
+</html>
